@@ -21,16 +21,20 @@ func NewTCPPeer(conn net.Conn, outbound bool) *TCPPeer {
 type TCPTransport struct {
 	lnAddr string
 	ln     net.Listener
-	peers  map[net.Addr]*TCPPeer
-	mu     sync.RWMutex
+
+	mu      sync.RWMutex
+	rpcChan chan RpcData
+	decoder Decoder
 }
 
 func NewTCPTransport(listenAddress string) *TCPTransport {
 	lnAddress := ":" + listenAddress
 
 	return &TCPTransport{
-		lnAddr: lnAddress,
-		peers:  make(map[net.Addr]*TCPPeer),
+		lnAddr:  lnAddress,
+		mu:      sync.RWMutex{},
+		rpcChan: make(chan RpcData),
+		decoder: NewBuffDecoder(),
 	}
 }
 
@@ -55,6 +59,26 @@ func (t *TCPTransport) startAcceptLoop() {
 	}
 }
 func (t *TCPTransport) handleConn(conn net.Conn) {
-	peer := NewTCPPeer(conn, true)
-	t.peers[peer.conn.LocalAddr()] = peer
+
+	rpcData := RpcData{
+		conn.RemoteAddr(),
+		[]byte{},
+	}
+	for {
+		buff := make([]byte, 1028)
+		n, err := conn.Read(buff)
+		if err != nil {
+			slog.Error("handleConn read", "Error", err.Error())
+			conn.Close()
+			break
+		}
+		rpcData.Payload = buff[:n]
+		t.rpcChan <- rpcData
+	}
+}
+func (t *TCPTransport) Consume() <-chan RpcData {
+	return t.rpcChan
+}
+func (t *TCPTransport) Close() error {
+	return t.ln.Close()
 }

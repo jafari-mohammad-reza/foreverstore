@@ -1,9 +1,14 @@
 package p2p
 
-type Transport interface {
-	ListenAndAccept() error
+import "net"
+
+type RpcData struct {
+	From    net.Addr
+	Payload []byte
 }
 
-type HandShaker interface {
-	HandShake() error
+type Transport interface {
+	ListenAndAccept() error
+	Close() error
+	Consume() <-chan RpcData
 }

@@ -12,9 +12,12 @@ func TestTcpTrans(t *testing.T) {
 	tr := NewTCPTransport(listenAddr)
 	assert.Equal(t, tr.lnAddr, ":"+listenAddr)
 	assert.Nil(t, tr.ListenAndAccept())
-	assert.Len(t, tr.peers, 0)
 	conn, err := net.Dial("tcp", tr.lnAddr)
-	conn.Write([]byte("test peer"))
+	testmsg := "test message"
+	conn.Write([]byte(testmsg))
 	assert.Nil(t, err)
-	assert.Len(t, tr.peers, 1)
+	for chanData := range tr.Consume() {
+		assert.Equal(t, string(chanData.Payload), testmsg)
+		break
+	}
 }
