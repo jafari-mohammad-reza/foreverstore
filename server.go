@@ -77,7 +77,7 @@ func (fs *FileServer) Start() error {
 	}
 	go fs.loop()
 	if len(fs.remoteNodes) > 0 {
-		go fs.InitNetwork()
+		return fs.InitNetwork()
 	}
 	return nil
 }
