@@ -1,6 +1,8 @@
 package p2p
 
 import (
+	"errors"
+	"io"
 	"log/slog"
 	"net"
 	"sync"
@@ -59,23 +61,28 @@ func (t *TCPTransport) startAcceptLoop() {
 	}
 }
 func (t *TCPTransport) handleConn(conn net.Conn) {
+	defer conn.Close()
 
-	rpcData := RpcData{
-		conn.RemoteAddr(),
-		[]byte{},
-	}
+	buff := make([]byte, 1028)
+
 	for {
-		buff := make([]byte, 1028)
 		n, err := conn.Read(buff)
 		if err != nil {
-			slog.Error("handleConn read", "Error", err.Error())
-			conn.Close()
+			if errors.Is(err, io.EOF) {
+				slog.Info("Client disconnected", "addr", conn.RemoteAddr())
+			} else {
+				slog.Error("handleConn read error", "addr", conn.RemoteAddr(), "error", err)
+			}
 			break
 		}
-		rpcData.Payload = buff[:n]
-		t.rpcChan <- rpcData
+		select {
+		case t.rpcChan <- RpcData{From: conn.RemoteAddr(), Payload: buff[:n]}:
+		default:
+			slog.Warn("Dropping message: channel full", "addr", conn.RemoteAddr())
+		}
 	}
 }
+
 func (t *TCPTransport) Consume() <-chan RpcData {
 	return t.rpcChan
 }
