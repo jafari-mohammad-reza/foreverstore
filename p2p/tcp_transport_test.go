@@ -8,9 +8,10 @@ import (
 )
 
 func TestTcpTrans(t *testing.T) {
-	listenAddr := "4000"
-	tr := NewTCPTransport(listenAddr)
-	assert.Equal(t, tr.lnAddr, ":"+listenAddr)
+	opts := NewTcpTransformOpts("4000", NewBuffDecoder())
+
+	tr := NewTCPTransport(opts)
+	assert.Equal(t, tr.lnAddr, ":"+opts.lnAddr)
 	assert.Nil(t, tr.ListenAndAccept())
 	conn, err := net.Dial("tcp", tr.lnAddr)
 	testmsg := "test message"

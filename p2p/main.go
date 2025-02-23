@@ -7,8 +7,12 @@ type RpcData struct {
 	Payload []byte
 }
 
+type Peer interface {
+	RemoteAddr() net.Addr
+}
 type Transport interface {
 	ListenAndAccept() error
 	Close() error
 	Consume() <-chan RpcData
+	Dial(string) error
 }
