@@ -16,3 +16,4 @@ type Transport interface {
 	Consume() <-chan RpcData
 	Dial(string) error
 }
+type OnPeerMethod func(p Peer) error

@@ -9,28 +9,28 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func makeServer(opts FileServerOpts) *FileServer {
-	return NewFileServer(opts)
+func makeServer(opts FileServerOpts, tcpOpts p2p.TransportOpts) *FileServer {
+	tcpTransport := p2p.NewTCPTransport(tcpOpts)
+	server := NewFileServer(opts)
+	tcpTransport.OnPeer = server.onPeer
+	server.Transport = tcpTransport
+	return server
 }
-
 func TestServer(t *testing.T) {
 	s1 := makeServer(FileServerOpts{
-		Transport:         p2p.NewTCPTransport(p2p.NewTcpTransformOpts("3000", p2p.NewBuffDecoder())),
 		StorageRoot:       "3000_storage",
 		PathTransformFunc: store.HashPathTransformFunc,
-	})
+	}, p2p.NewTcpTransformOpts("3000", p2p.NewBuffDecoder()))
 	s2 := makeServer(FileServerOpts{
-		Transport:         p2p.NewTCPTransport(p2p.NewTcpTransformOpts("4000", p2p.NewBuffDecoder())),
 		StorageRoot:       "4000_storage",
 		PathTransformFunc: store.HashPathTransformFunc,
 		remoteNodes:       []string{"3000"},
-	})
+	}, p2p.NewTcpTransformOpts("4000", p2p.NewBuffDecoder()))
 	s3 := makeServer(FileServerOpts{
-		Transport:         p2p.NewTCPTransport(p2p.NewTcpTransformOpts("5000", p2p.NewBuffDecoder())),
 		StorageRoot:       "5000_storage",
 		PathTransformFunc: store.HashPathTransformFunc,
 		remoteNodes:       []string{"3000", "4000", "6000"},
-	})
+	}, p2p.NewTcpTransformOpts("5000", p2p.NewBuffDecoder()))
 	err := s1.Start()
 	if err != nil {
 		t.Error(err)

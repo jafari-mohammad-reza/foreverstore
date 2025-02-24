@@ -24,35 +24,37 @@ func (p *TCPPeer) RemoteAddr() net.Addr {
 }
 
 type TransportOpts struct {
-	lnAddr   string
-	ln       net.Listener
-	mu       sync.RWMutex
-	peers    map[net.Addr]Peer
-	peerLock sync.RWMutex
-	rpcChan  chan RpcData
-	decoder  Decoder
+	lnAddr  string
+	mu      sync.RWMutex
+	rpcChan chan RpcData
+	decoder Decoder
 }
 
 func NewTcpTransformOpts(lnAddress string, decoder Decoder) TransportOpts {
 	return TransportOpts{
-		lnAddr:   lnAddress,
-		mu:       sync.RWMutex{},
-		rpcChan:  make(chan RpcData),
-		peers:    make(map[net.Addr]Peer),
-		peerLock: sync.RWMutex{},
-		decoder:  decoder,
+		lnAddr:  lnAddress,
+		mu:      sync.RWMutex{},
+		rpcChan: make(chan RpcData),
+		decoder: decoder,
 	}
 }
 
 type TCPTransport struct {
-	TransportOpts
+	lnAddr  string
+	mu      sync.RWMutex
+	rpcChan chan RpcData
+	decoder Decoder
+	ln      net.Listener
+	OnPeer  OnPeerMethod
 }
 
 func NewTCPTransport(opts TransportOpts) *TCPTransport {
-	opts.lnAddr = ":" + opts.lnAddr
 
 	return &TCPTransport{
-		TransportOpts: opts,
+		lnAddr:  ":" + opts.lnAddr,
+		mu:      opts.mu,
+		rpcChan: opts.rpcChan,
+		decoder: opts.decoder,
 	}
 }
 
@@ -81,9 +83,14 @@ func (t *TCPTransport) startAcceptLoop() {
 	}
 }
 func (t *TCPTransport) handleConn(conn net.Conn, outbound bool) {
-	t.peerLock.Lock()
-	t.peers[conn.RemoteAddr()] = NewTCPPeer(conn, outbound)
-	t.peerLock.Unlock()
+	if t.OnPeer != nil {
+		peer := NewTCPPeer(conn, outbound)
+		err := t.OnPeer(peer)
+		if err != nil {
+			slog.Error("handleConn", "Error", err.Error())
+		}
+	}
+
 	defer func() {
 		err := conn.Close()
 		if err != nil {
