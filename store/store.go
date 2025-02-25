@@ -64,17 +64,17 @@ func NewStore(opts StoreOpts) *Store {
 	}
 }
 
-func (s *Store) readStream(key string) (io.ReadCloser, error) {
+func (s *Store) ReadStream(key string) (io.ReadCloser, error) {
 	pathKey := s.opts.PathTransformFunc(key)
 	return os.Open(pathKey.FullPath(s.opts.Root))
 }
 
-func (s *Store) delete(key string) error {
+func (s *Store) Delete(key string) error {
 	pathKey := s.opts.PathTransformFunc(key)
 	return os.RemoveAll(pathKey.FullPath(s.opts.Root))
 }
 
-func (s *Store) exists(key string) bool {
+func (s *Store) Exists(key string) bool {
 	pathKey := s.opts.PathTransformFunc(key)
 	_, err := os.Stat(pathKey.FullPath(s.opts.Root))
 	if os.ErrNotExist == err {
@@ -83,8 +83,8 @@ func (s *Store) exists(key string) bool {
 	return true
 }
 
-func (s *Store) read(key string) (io.Reader, error) {
-	f, err := s.readStream(key)
+func (s *Store) Read(key string) (io.Reader, error) {
+	f, err := s.ReadStream(key)
 	defer func() {
 		err := f.Close()
 		if err != nil {
@@ -102,7 +102,7 @@ func (s *Store) read(key string) (io.Reader, error) {
 	return buff, nil
 }
 
-func (s *Store) writeStream(key string, r io.Reader) error {
+func (s *Store) WriteStream(key string, r io.Reader) error {
 	pathKey := s.opts.PathTransformFunc(key)
 	if err := os.MkdirAll(path.Join(s.opts.Root, pathKey.Pathname), os.ModePerm); err != nil {
 		return err

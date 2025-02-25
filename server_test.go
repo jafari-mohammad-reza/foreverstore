@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"os"
 	"testing"
 	"time"
 
@@ -35,6 +37,7 @@ func TestServer(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+	time.Sleep(time.Second)
 	err = s2.Start()
 	if err != nil {
 		t.Error(err)
@@ -44,4 +47,17 @@ func TestServer(t *testing.T) {
 	if err != nil {
 		assert.NotNil(t, err)
 	}
+	time.Sleep(time.Second)
+
+	writtenData := bytes.NewReader([]byte("test data"))
+	err = s2.storeData("storeDataTestKey", writtenData)
+	if err != nil {
+		assert.Nil(t, err)
+	}
+	time.Sleep(time.Second)
+	defer func() {
+		os.RemoveAll("3000_storage")
+		os.RemoveAll("4000_storage")
+		os.RemoveAll("5000_storage")
+	}()
 }

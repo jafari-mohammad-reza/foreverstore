@@ -9,23 +9,32 @@ import (
 )
 
 type TCPPeer struct {
-	conn     net.Conn
+	net.Conn
 	outbound bool // case we dial the connection not accept it
+	wg       *sync.WaitGroup
 }
 
 func NewTCPPeer(conn net.Conn, outbound bool) *TCPPeer {
 	return &TCPPeer{
-		conn:     conn,
+		Conn:     conn,
 		outbound: outbound,
+		wg:       &sync.WaitGroup{},
 	}
 }
 func (p *TCPPeer) RemoteAddr() net.Addr {
-	return p.conn.RemoteAddr()
+	return p.Conn.RemoteAddr()
+}
+func (p *TCPPeer) Close() error {
+	return p.Close()
+}
+
+func (p *TCPPeer) Send(b []byte) error {
+	_, err := p.Conn.Write(b)
+	return err
 }
 
 type TransportOpts struct {
 	lnAddr  string
-	mu      sync.RWMutex
 	rpcChan chan RpcData
 	decoder Decoder
 }
@@ -33,7 +42,6 @@ type TransportOpts struct {
 func NewTcpTransformOpts(lnAddress string, decoder Decoder) TransportOpts {
 	return TransportOpts{
 		lnAddr:  lnAddress,
-		mu:      sync.RWMutex{},
 		rpcChan: make(chan RpcData),
 		decoder: decoder,
 	}
@@ -52,7 +60,7 @@ func NewTCPTransport(opts TransportOpts) *TCPTransport {
 
 	return &TCPTransport{
 		lnAddr:  ":" + opts.lnAddr,
-		mu:      opts.mu,
+		mu:      sync.RWMutex{},
 		rpcChan: opts.rpcChan,
 		decoder: opts.decoder,
 	}
@@ -83,8 +91,9 @@ func (t *TCPTransport) startAcceptLoop() {
 	}
 }
 func (t *TCPTransport) handleConn(conn net.Conn, outbound bool) {
+	peer := NewTCPPeer(conn, outbound)
+
 	if t.OnPeer != nil {
-		peer := NewTCPPeer(conn, outbound)
 		err := t.OnPeer(peer)
 		if err != nil {
 			slog.Error("handleConn", "Error", err.Error())

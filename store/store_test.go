@@ -17,14 +17,14 @@ func TestStore(t *testing.T) {
 	store := NewStore(opts)
 	writtenData := []byte("some data")
 	storeData := bytes.NewReader(writtenData)
-	if err := store.writeStream(pathName, storeData); err != nil {
+	if err := store.WriteStream(pathName, storeData); err != nil {
 		t.Error(err)
 	}
-	_, err := store.readStream(pathName)
+	_, err := store.ReadStream(pathName)
 	if err != nil {
 		t.Error(err)
 	}
-	file, err := store.read(pathName)
+	file, err := store.Read(pathName)
 	if err != nil {
 		t.Error(err)
 	}
@@ -33,9 +33,9 @@ func TestStore(t *testing.T) {
 		t.Error(err)
 	}
 	assert.Equal(t, fileData, writtenData)
-	exists := store.exists(pathName)
+	exists := store.Exists(pathName)
 	assert.True(t, exists)
-	err = store.delete(pathName)
+	err = store.Delete(pathName)
 	if err != nil {
 		t.Error(err)
 	}

@@ -8,7 +8,9 @@ type RpcData struct {
 }
 
 type Peer interface {
+	net.Conn
 	RemoteAddr() net.Addr
+	Close() error
 }
 type Transport interface {
 	ListenAndAccept() error
